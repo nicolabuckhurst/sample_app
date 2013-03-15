@@ -12,7 +12,21 @@
       <%= f.password_field :password %>
 
       <%= f.submit "Sign in", class: "btn btn-large btn-primary" %>
-    <% end %>
+    <%end %>
+    
+    <!-- alternative Form_for implemetation....you also need to change params[:session][:email] and params[:session][:password]
+    to params[:email] and params[:password] for this to work.
+      <%=form_tag('/sessions') do %>
+      
+      <%=label_tag 'email'%>
+      <%=text_field_tag 'email'%>
+    
+      <%=label_tag 'password'%>
+      <%=password_field_tag 'password'%>
+      
+      <%=button_tag 'submit',class: "btn btn-large btn-primary"  %>
+      
+    <%end%> -->
 
     <p>New user? <%= link_to "Sign up now!", signup_path %></p>
   </div>
