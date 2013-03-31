@@ -4,6 +4,18 @@ require 'spec_helper'
 describe "Authentication" do
 
   subject { page }
+  
+  describe "non signed in users" do
+    let(:user) { FactoryGirl.create(:user) }
+    
+    before {visit root_path}
+    
+    it { should_not have_link('Users',    href: users_path) }
+    it { should_not have_link('Profile', href: user_path(user)) }
+    it { should_not have_link('Settings', href: edit_user_path(user)) }
+    it { should_not have_link('Sign out', href: signout_path) }
+    it { should have_link('Sign in', href: signin_path) }
+  end
 
   describe "signin page" do
     before { visit signin_path }
@@ -31,17 +43,16 @@ describe "Authentication" do
     describe "with valid information" do
       let(:user) { FactoryGirl.create(:user) }
       before do
-        valid_signin(user)
+        sign_in(user)
       end
 
       it { should have_selector('title', text: user.name) }
-      
       it { should have_link('Users',    href: users_path) }
       it { should have_link('Profile', href: user_path(user)) }
       it { should have_link('Settings', href: edit_user_path(user)) }
       it { should have_link('Sign out', href: signout_path) }
       it { should_not have_link('Sign in', href: signin_path) }
-    
+      
       describe "followed by signout" do
         before { click_link "Sign out" }
         it { should have_link('Sign in') }
@@ -67,6 +78,20 @@ describe "Authentication" do
           it "should render the desired protected page" do
             page.should have_selector('title', text: 'Edit user')
           end
+      
+          describe "when signing in again" do
+            before do
+              delete signout_path
+              visit signin_path
+              fill_in "Email",    with: user.email
+              fill_in "Password", with: user.password
+              click_button "Sign in"
+            end
+
+            it "should render the default (profile) page" do
+              page.should have_selector('title', text: user.name) 
+            end
+          end
         end
       end
 
@@ -87,6 +112,19 @@ describe "Authentication" do
           it { should have_selector('title', text: 'Sign in') }
         end
       end
+      
+      describe "in the Microposts controller" do
+
+        describe "submitting to the create action" do
+          before { post microposts_path }
+          specify { response.should redirect_to(signin_path) }
+        end
+
+        describe "submitting to the destroy action" do
+          before { delete micropost_path(FactoryGirl.create(:micropost)) }
+          specify { response.should redirect_to(signin_path) }
+        end
+      end
     end
   
     describe "as wrong user" do
@@ -103,6 +141,16 @@ describe "Authentication" do
         before { put user_path(wrong_user) }
         specify { response.should redirect_to(root_path) }
       end
+      
+      describe "submitting get request to users#new action"do
+        before {get signup_path}
+        specify { response.should redirect_to(root_path) }
+      end
+      
+      describe "submitting post request to user#create action"do
+        before {post users_path}
+        specify { response.should redirect_to(root_path)}
+      end
     end
     
     describe "as non-admin user" do
@@ -113,7 +161,39 @@ describe "Authentication" do
 
       describe "submitting a DELETE request to the Users#destroy action" do
         before { delete user_path(user) }
-        specify { response.should redirect_to(root_path) }        
+        specify {response.should redirect_to(root_path) }        
+      end
+    end
+    
+    describe "as admin user" do
+      let(:user) { FactoryGirl.create(:admin) }
+      let(:user2) {FactoryGirl.create(:admin)}
+      before {sign_in user}
+      
+      before { visit users_path }
+    
+      describe "trying to delete self" do
+        before { delete user_path(user) }
+        #it {should have_link('delete', href:user_path(user))}
+        
+        #before {click_link ('delete')}
+        
+        it{ flash[:error].should eql('Admin Users cannot destroy themselves') }
+        
+        #it { should have_error_message('Admin Users cannot destroy themselves') }
+        specify {response.should redirect_to(users_path)}
+        
+        it do
+          follow_redirect!
+          response.should render_template('index')
+          response.body.should have_selector('div.alert.alert-error',text:"Admin Users cannot destroy themselves")
+          
+        end
+        
+        
+        #flash[:error].should eql('Admin Users cannot destroy themselves')
+        
+        #it{response.should have_selector('div.alert.alert-error',text:'Admin Users cannot destroy themselves')}
       end
     end
   
