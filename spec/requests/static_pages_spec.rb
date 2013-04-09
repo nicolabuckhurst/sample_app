@@ -19,19 +19,55 @@ describe "Static pages" do
     
     describe "for signed-in users" do
       let(:user) { FactoryGirl.create(:user) }
-      before do
-        FactoryGirl.create(:micropost, user: user, content: "Lorem ipsum")
-        FactoryGirl.create(:micropost, user: user, content: "Dolor sit amet")
-        sign_in user
-        visit root_path
-      end
+      
+      describe "test that with 1 micropost the micropost count is correct and singular" do
+        before do
+          FactoryGirl.create(:micropost, user: user, content: "lorem ipsum")
+          sign_in user
+          visit root_path
+        end
+        
+        it {page.should have_content("1 micropost")}
+      
+      
+        describe "add more microposts for other tests" do
+      
+          let(:testmicroposts) {  [ {text: "Dolor sit amet"} ]  }
+        
+          before do
+            testmicroposts.each do |m|
+            FactoryGirl.create(:micropost, user: user, content: m[:text])
+            end
+          #FactoryGirl.create(:micropost, user: user, content: "Lorem ipsum")
+          #FactoryGirl.create(:micropost, user: user, content: "Dolor sit amet")
+          #sign_in user
+          visit root_path
+          end
+      
+          it "should render the user's feed" do
+            user.feed.each do |item|
+            page.should have_selector("li##{item.id}", text: item.content)
+            end
+          end
+        
+          it "should have x microposts and be plural" do
+            #page.should have_content("#{user.microposts.count} microposts")
+            page.should have_content("#{1 + testmicroposts.count} microposts")
+          end
+          
+          describe "follower/following counts" do
+            let(:other_user) { FactoryGirl.create(:user) }
+            before do
+            other_user.follow!(user)
+            visit root_path
+          end
 
-      it "should render the user's feed" do
-        user.feed.each do |item|
-          page.should have_selector("li##{item.id}", text: item.content)
+            it { should have_link("0 following", href: following_user_path(user)) }
+            it { should have_link("1 followers", href: followers_user_path(user)) }
+          end
         end
       end
-    end
+    end    
   end
 
   describe "Help page" do

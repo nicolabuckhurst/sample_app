@@ -42,4 +42,36 @@ describe "Micropost pages" do
       end
     end
   end
+  
+  describe "pagination" do
+
+      #if you persist things in the database in a before(:all) block they don't
+      #get automatically cleared out of the test database at the end of the example block
+      #you can avoid this by using before or before(:each) or clearing out your database
+      #using an after(:all) hook
+      before(:all) { 50.times { FactoryGirl.create(:micropost, user: user) } }
+      after(:all)  { User.delete_all }
+      
+      before {visit root_path}
+
+      it { should have_selector('div.pagination') }
+
+  end
+  
+  describe "microposts that aren't from current user shouldn't have a delete link" do
+      let(:diffuser) {FactoryGirl.create(:user)}
+    
+      let!(:diffuserpost) {FactoryGirl.create(:micropost, user: FactoryGirl.create(:user))}
+
+      let!(:currentuserpost) {FactoryGirl.create(:micropost, user: user)}
+       
+      before {visit root_path}
+      
+      it {should_not have_link('delete', href: micropost_path(diffuserpost) )}
+      
+      it {should have_link('delete', href: micropost_path(currentuserpost) )}
+      
+      
+  end
+
 end
