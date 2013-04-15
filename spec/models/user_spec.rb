@@ -212,6 +212,26 @@ end
       its(:followers) { should include(@user) }
     end
     
+    describe "deleting relationships" do
+      let(:follower) {FactoryGirl.create(:user)}
+      before do
+        follower.follow!(@user)
+      end
+      it "should delete relationships when user is deleted, check for follower and followed relationships" do
+        relationships = @user.relationships.dup
+        followerrelationships = follower.relationships.dup
+        @user.destroy
+        relationships.should_not be_empty
+        followerrelationships.should_not be_empty
+        relationships.each do |relationship|
+          Relationship.find_by_follower_id(relationship.follower_id).should be_nil
+        end
+        followerrelationships.each do |relationship|
+          Relationship.find_by_followed_id(relationship.followed_id).should be_nil
+        end
+      end
+    end
+    
     describe "and unfollowing" do
       before { @user.unfollow!(other_user) }
 
